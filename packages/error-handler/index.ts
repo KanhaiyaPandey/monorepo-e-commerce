@@ -3,10 +3,11 @@ export class AppError extends Error {
     public readonly isOperational: boolean;
     public readonly details?: any;
 
-    constructor(message: string, statusCode: number) {
+    constructor(message: string, statusCode: number, details?: any) {
         super(message);
         this.statusCode = statusCode;
         this.isOperational = true;
+        this.details = details;
 
         Error.captureStackTrace(this, this.constructor);
     }
@@ -22,7 +23,7 @@ export class NotFoundError extends AppError {
 // Validation error
 export class ValidationError extends AppError {
     constructor(message: string = "Invalid request data", details?: any) {
-        super(message, 400);
+        super(message, 400, details);
     }
 }
 
