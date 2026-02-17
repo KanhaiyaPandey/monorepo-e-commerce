@@ -7,6 +7,7 @@ import {
   validateUserRegistrationInput,
 } from '../utils/auth.helper';
 import { ValidationError } from '../../../../packages/error-handler';
+import { prisma } from '../prisma';
 
 export const userRegistration = async (
   req: Request,
@@ -15,7 +16,7 @@ export const userRegistration = async (
 ) => {
   try {
     const { name, email } = validateUserRegistrationInput(req.body);
-    const existingUser = null;
+    const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       return next(new ValidationError('User already exists with this email'));
     }
@@ -24,7 +25,13 @@ export const userRegistration = async (
     await trackFailedOtpAttempts(email, next);
     await sendOtp(email, name, 'user-activation-mail');
 
-    // user creation removed; previously used Prisma client
+    // await prisma.user.create({
+    //   data: {
+    //     name,
+    //     email,
+    //     isActive: false,
+    //   },
+    // });
 
     res.status(200).json({ message: 'OTP sent successfully' });
   } catch (error) {
