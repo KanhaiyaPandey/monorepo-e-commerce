@@ -1,26 +1,35 @@
 import { NextFunction, Response, Request } from "express";
-import { hashPassword, validateUserRegistrationInput } from "../utils/auth.helper";
+import { checkOtpRestrictions,
+          sendOtp,
+          trackFailedOtpAttempts, trackOptRequests,
+          validateUserRegistrationInput } from "../utils/auth.helper";
 import prisma from "../../../../packages/libs/prisma";
 import { ValidationError } from "../../../../packages/error-handler";
 
 export const userRegistration = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { name, email, password } = validateUserRegistrationInput(req.body);
-    const hashedPassword = hashPassword(password);
+    const { name, email } = validateUserRegistrationInput(req.body);
     const existingUser = await prisma.user.findUnique({ where: { email } });
 
     if (existingUser) {
       return next(new ValidationError("User already exists with this email"));
     }
-    const newUser = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-      },
-    });
-    res.status(201).json({ message: "User registered successfully", userId: newUser.id });
+
+    await checkOtpRestrictions(email, next);
+    await trackOptRequests(email, next);
+    await trackFailedOtpAttempts(email, next);
+    await sendOtp(email, name, "user-activation-mail");
+
+    // const newUser = await prisma.user.create({
+    //   data: {
+    //     name,
+    //     email,
+    //     password: hashedPassword,
+    //   },
+    // });
+
+    res.status(200).json({ message: "OTP sent successfully" });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
